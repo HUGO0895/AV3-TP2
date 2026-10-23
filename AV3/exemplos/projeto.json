@@ -1,0 +1,16 @@
+{
+  "id": 1,
+  "genero": "DRAMA",
+  "tipo": "FICÇÃO",
+  "duracaoMin": 90,
+  "orcamento": 150000,
+  "prazo": "2026-03-10T00:00:00.000Z",
+  "competencias": {
+    "DIRETOR": [{ "nome": "Direção", "nivel": 5 }],
+    "EDITOR": [{ "nome": "Edição", "nivel": 4 }],
+    "SONOPLASTA": [{ "nome": "Som", "nivel": 5 }]
+  },
+  "pesos": { "DIRETOR": 3, "EDITOR": 2, "SONOPLASTA": 1 },
+  "estrategia": "similiaridadecosseno",
+  "parametros": { "limiarMinimo": 0.2 }
+}

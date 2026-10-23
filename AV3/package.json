@@ -1,0 +1,42 @@
+{
+  "name": "AV1-TP-II",
+  "version": "1.0.0",
+  "description": "Microsserviço cinebridge: recomendação e orquestração de equipes audiovisuais",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/app.ts",
+    "dev": "nodemon --exec ts-node src/app.ts --ext ts",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "typecheck": "tsc --noEmit",
+    "typeorm": "ts-node ./node_modules/typeorm/cli.js -d src/ConecBanco.ts",
+    "migration:run": "npm run typeorm -- migration:run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.5.0",
+    "globals": "^17.4.0",
+    "jest": "^30.5.1",
+    "jest-mock-extended": "^4.0.1",
+    "ts-jest": "^29.4.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "fastify": "^5.12.1",
+    "javascript-lp-solver": "^1.0.3",
+    "nodemon": "^3.1.14",
+    "pg": "^8.23.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

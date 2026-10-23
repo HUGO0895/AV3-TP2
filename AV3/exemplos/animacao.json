@@ -1,0 +1,14 @@
+{
+  "id": 3,
+  "genero": "COMEDIA",
+  "tipo": "ANIMAÇÃO",
+  "duracaoMin": 15,
+  "orcamento": 120000,
+  "prazo": "2026-06-10T00:00:00.000Z",
+  "competencias": {
+    "DIRETOR": [{ "nome": "Direção", "nivel": 4 }],
+    "EFEITOS_VISUAIS": [{ "nome": "Efeitos Visuais", "nivel": 5 }]
+  },
+  "estrategia": "similiaridadecosseno",
+  "detalhes": { "tecnica": "3D", "cenas": 24 }
+}
