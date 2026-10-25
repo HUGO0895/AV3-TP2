@@ -8,6 +8,7 @@ import MembroEquipe from '../../Equipe/Modelo/membroEquipe'
 import { ErroNegocio } from '../../erros'
 import ElementoVisitado from '../../Visitor/ElementoVisitado'
 import VisitanteProjeto from '../../Visitor/VisitanteProjeto'
+import ServicoProjeto from '../../composite/ServicoProjeto'
 /** Campos que podem ser ajustados ao criar um projeto a partir de um protótipo. */
 export interface AjustesProjeto {
      id?:string
@@ -18,6 +19,7 @@ export interface AjustesProjeto {
      estrategia?:string
      competencias?:Map<Papel,Array<Competencias>>
      pesos?:Map<Papel,number>
+     servicoPrincipal?:ServicoProjeto
      /** Atributos específicos do tipo (tema, entrevistados, cliente...). Ignorados pelo tipo genérico. */
      detalhes?:Record<string,unknown>
 }
@@ -38,6 +40,8 @@ export default class Projeto implements ElementoVisitado{
      public competencias?:Map<Papel,Array<Competencias>>
      public estrategia?:string
      public pesos?:Map<Papel,number>
+     /** Composite: raiz da hierarquia de serviços (pacotes e serviços atômicos) do projeto. */
+     public servicoPrincipal?:ServicoProjeto
      constructor(id:string,genero:Genero,duracaoMin:number,orcamento:number,prazo:Date,tipo:TipoProjeto,competencias?:Map<Papel,Array<Competencias>>,equipe?:Equipe,estrategia?:string,pesos?:Map<Papel,number>){
           this.id=id
           this.genero=genero
@@ -56,6 +60,19 @@ export default class Projeto implements ElementoVisitado{
 
      public getId():string{
           return this.id
+     }
+
+     /** Delegado ao serviço principal, que soma recursivamente (0 quando não há serviços). */
+     public calcularCustoTotal():number{
+          return this.servicoPrincipal?.calcularCusto() ?? 0
+     }
+
+     /** Validação recursiva: serviços válidos, dentro do orçamento e com todos os prazos até o prazo do projeto. */
+     public validarEstrutura():boolean{
+          if(!this.servicoPrincipal) return true
+          if(!this.servicoPrincipal.validar()) return false
+          if(this.calcularCustoTotal()>this.orcamento) return false
+          return this.servicoPrincipal.obterPrazo().every((d)=>d.getTime()<=this.prazo.getTime())
      }
 
      /** Peso de importância do papel (1 quando não informado). */
@@ -101,6 +118,7 @@ export default class Projeto implements ElementoVisitado{
           if(ajustes.estrategia!==undefined) this.estrategia=ajustes.estrategia
           if(ajustes.competencias!==undefined) this.competencias=Projeto.copiarCompetencias(ajustes.competencias)
           if(ajustes.pesos!==undefined) this.pesos=new Map(ajustes.pesos)
+          if(ajustes.servicoPrincipal!==undefined) this.servicoPrincipal=ajustes.servicoPrincipal
           return this
      }
 
@@ -109,6 +127,8 @@ export default class Projeto implements ElementoVisitado{
           destino.prazo=new Date(this.prazo)
           destino.competencias=this.competencias ? Projeto.copiarCompetencias(this.competencias) : undefined
           destino.pesos=this.pesos ? new Map(this.pesos) : undefined
+          // Serviços são tratados como imutáveis: o clone compartilha a mesma hierarquia.
+          destino.servicoPrincipal=this.servicoPrincipal
           destino.equipe=this.equipe
                ? new Equipe(new Date(this.equipe.dataFormacao),this.equipe.status,
                     this.equipe.membrosEquipe.map((m)=>new MembroEquipe(m.papel,m.confirmado,m.profissional)))

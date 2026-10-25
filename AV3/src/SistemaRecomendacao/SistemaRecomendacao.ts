@@ -5,7 +5,7 @@ import MembroEquipe from "../Equipe/Modelo/membroEquipe";
 import OrquestradorEquipe from "../Equipe/Modelo/OrquestradorEquipe";
 import OrquestradorPadrao from "../Equipe/Modelo/OrquestradorPadrao";
 import Profissional from "../Equipe/Modelo/Profissional";
-import { ErroNegocio, ErroValidacao } from "../erros";
+import { ErroNegocio, ErroServicoIndisponivel, ErroValidacao } from "../erros";
 import AuditoriaRecomendacao from "../Observer/AuditoriaRecomendacao";
 import EventoRecomendacao, { TiposEvento } from "../Observer/EventoRecomendacao";
 import NotificadorEmail from "../Observer/NotificadorEmail";
@@ -15,11 +15,18 @@ import Projeto from "../Projetos/Modelo/projetos";
 import RecomendacaoStrategy from "../Strategy/RecomendacaoStrategy";
 import FabricaProjeto from "../Fabricas/FabricaProjeto";
 import RegistroFabricas from "../Fabricas/RegistroFabricas";
+import AdaptadorArmazenamento from "../adapter/armazenamento/AdaptadorArmazenamento";
+import AdaptadorPagamento from "../adapter/pagamento/AdaptadorPagamento";
+import AdaptadorProfissional from "../adapter/profissional/AdaptadorProfissional";
 
 const ORIGEM = "Sistema Recomendação"
 
 export default class SistemaRecomendacao{
     private EstrategiaAtual?:RecomendacaoStrategy
+    // Adapter: o sistema só conhece as interfaces; o provedor concreto é injetado.
+    private armazenamento?:AdaptadorArmazenamento
+    private pagamento?:AdaptadorPagamento
+    private profissionais?:AdaptadorProfissional
 
     constructor(
         private Observadores:Array<Observador>=[new NotificadorEmail(),new NotificadorInterno(),new AuditoriaRecomendacao()],
@@ -29,6 +36,42 @@ export default class SistemaRecomendacao{
 
    public definirEstrategiaAtual(estrategia:RecomendacaoStrategy){
              this.EstrategiaAtual=estrategia
+   }
+
+   /** Injeta (ou troca em tempo de execução) os adaptadores dos sistemas externos. Omitidos mantêm o atual. */
+   public configurarAdaptadores(armazenamento?:AdaptadorArmazenamento,pagamento?:AdaptadorPagamento,profissional?:AdaptadorProfissional){
+             if(armazenamento) this.armazenamento=armazenamento
+             if(pagamento) this.pagamento=pagamento
+             if(profissional) this.profissionais=profissional
+   }
+
+   /** Recomenda usando a estratégia atual e os profissionais da fonte configurada (LinkedIn, cadastro interno...). */
+   public executarRecomendacao(projeto:Projeto):Equipe{
+     const candidatos=this.exigir(this.profissionais,"profissionais").listarProfissionais({})
+     return this.executarEstrategia(projeto,candidatos)
+   }
+
+   /** Guarda um arquivo de mídia do projeto (roteiro, storyboard, amostra) no armazenamento configurado. */
+   public salvarMidia(projeto:Projeto,nome:string,conteudo:Buffer):string{
+     return this.exigir(this.armazenamento,"armazenamento").salvarArquivo(conteudo,{pasta:`projetos/${projeto.getId()}`,nome})
+   }
+
+   public listarMidias(projeto:Projeto):string[]{
+     return this.exigir(this.armazenamento,"armazenamento").listarArquivos(`projetos/${projeto.getId()}/`)
+   }
+
+   public recuperarMidia(id:string):Buffer{
+     return this.exigir(this.armazenamento,"armazenamento").recuperarArquivo(id)
+   }
+
+   /** Paga cada membro da equipe (preço médio) pelo gateway configurado; devolve o id da transação de cada papel. */
+   public pagarEquipe(projeto:Projeto,equipe:Equipe,origem:string):Map<Papel,string>{
+     const gateway=this.exigir(this.pagamento,"pagamento")
+     const recibos=new Map<Papel,string>()
+     for(const m of equipe.membrosEquipe){
+        recibos.set(m.papel,gateway.efetuarPagamento(m.profissional.precoMedio,origem,m.profissional.getId()))
+     }
+     return recibos
    }
 
    /** Nome do diagrama UML. */
@@ -114,6 +157,11 @@ export default class SistemaRecomendacao{
    /** Mantido por compatibilidade com o nome original (com erro de digitação). */
    public adicionarObeservador(observador:Observador){
             this.adicionarObservador(observador)
+   }
+
+   private exigir<T>(adaptador:T|undefined,nome:string):T{
+        if(!adaptador) throw new ErroServicoIndisponivel(`Adaptador de ${nome} não configurado`)
+        return adaptador
    }
 
    private resolverEstrategia(estrategia?:RecomendacaoStrategy):RecomendacaoStrategy{
